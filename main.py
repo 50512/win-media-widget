@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
-IP_API = os.getenv("SELF_TAILSCALE_IP", "0.0.0.0")
+IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
 
 ERROR_RESPONSES = {
     401: {"description": "Token inválido o ausente"},
