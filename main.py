@@ -20,6 +20,10 @@ def verify_token(token: str):
     if token != SECRET_TOKEN:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_RESPONSES[401])
 
+@app.get("/media/health")
+async def health():
+    return {"status": "OK"}
+
 @app.get("/media/{action}", responses=ERROR_RESPONSES)
 async def control_media(action: str, x_token: Annotated[str | None, Header()]):
     verify_token(x_token)
@@ -27,6 +31,7 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
     # Mapeo de la URL a las teclas virtuales del sistema operativo
     actions = {
         "play": "playpause",
+        "pause": "playpause",
         "vol-up": "volumeup",
         "vol-down": "volumedown",
         "mute": "volumemute",
