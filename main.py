@@ -2,12 +2,14 @@ from fastapi import FastAPI, Header, HTTPException, status
 from typing import Annotated
 import pyautogui
 import uvicorn
+import sys
 import os
 
 app = FastAPI()
 
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
+LOG_PATH = r"C:\Scripts\MediaAPI\server.log"
 
 ERROR_RESPONSES = {
     401: {"description": "Token inválido o ausente"},
@@ -39,6 +41,9 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_RESPONSES[404])
 
 if __name__ == "__main__":
+    sys.stdout = open(LOG_PATH, 'a', encoding='utf-8')
+    sys.stderr = open(LOG_PATH, 'a', encoding='utf-8')
+    
     if not SECRET_TOKEN:
         raise EnvironmentError("Token no existente")
     uvicorn.run(app, host=IP_API, port=8000)
