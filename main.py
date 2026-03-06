@@ -46,6 +46,10 @@ def set_logger():
             if message.strip():
                 self.level(message.strip())
 
+        def isatty(self):
+            # siempre False al ser write a un archivo
+            return False
+
         def flush(self):
             # for avoid non exist function
             pass
