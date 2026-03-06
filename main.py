@@ -16,13 +16,16 @@ ERROR_RESPONSES = {
     404: {"description": "Acción multimedia no reconocida"}
 }
 
+
 def verify_token(token: str):
     if token != SECRET_TOKEN:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_RESPONSES[401])
 
+
 @app.get("/media/health")
 async def health():
     return {"status": "OK"}
+
 
 @app.get("/media/{action}", responses=ERROR_RESPONSES)
 async def control_media(action: str, x_token: Annotated[str | None, Header()]):
@@ -44,6 +47,7 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
         return {"status": "success", "action": action}
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_RESPONSES[404])
+
 
 if __name__ == "__main__":
     sys.stdout = open(LOG_PATH, 'a', encoding='utf-8')
