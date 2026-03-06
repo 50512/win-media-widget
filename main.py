@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Header, HTTPException, status
+from fastapi.responses import HTMLResponse
 from typing import Annotated
+from pathlib import Path
 import pyautogui
 import uvicorn
 import sys
 import os
-
-app = FastAPI()
 
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
@@ -16,13 +16,24 @@ ERROR_RESPONSES = {
     404: {"description": "Acción multimedia no reconocida"}
 }
 
+BASE_DIR = Path(__file__).resolve().parent
+with open(BASE_DIR / "panel.html", "r", encoding="utf-8") as f:
+    TEMPLATE_HTML = f.read()
+
+app = FastAPI()
+
 
 def verify_token(token: str):
     if token != SECRET_TOKEN:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_RESPONSES[401])
 
 
-@app.get("/media/health")
+@app.get("/panel", response_class=HTMLResponse)
+async def control_panel():    
+    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN)
+
+
+@app.get("/health")
 async def health():
     return {"status": "OK"}
 
@@ -55,4 +66,4 @@ if __name__ == "__main__":
     
     if not SECRET_TOKEN:
         raise EnvironmentError("Token no existente")
-    uvicorn.run(app, host=IP_API, port=8000)
+    uvicorn.run(app, host=IP_API, port=25012)
