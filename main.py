@@ -74,7 +74,7 @@ def verify_token(token: str):
 
 @app.get("/panel", response_class=HTMLResponse)
 async def control_panel():
-    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN)
+    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN).replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
 
 
 @app.get("/health")
