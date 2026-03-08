@@ -22,7 +22,7 @@
         justify-content: center;
         align-items: center;
         gap: var(--button-gaps);
-        background: #1e1e1e;
+        background: transparent;
         margin: 0;
         max-width: 450px;
       }
@@ -52,7 +52,6 @@
         height: 150px;
         object-fit: contain;
         background-color: rgba(255, 255, 255, 0.07);
-        box-shadow: 0px 0px 12px 2px #ffffff;
       }
 
       button {
@@ -82,6 +81,7 @@
 
     <script>
       let currentTitle = "";
+      let found_thumbnail = false;
 
       const PLAY_PAUSE_LOGO =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
@@ -100,6 +100,44 @@
         }).catch((err) => console.error("Error:", err));
       }
 
+      function setBorderShadowThumbnail(thumbElement) {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+
+        thumbElement.onload = () => {
+          const width = (canvas.width = 100);
+          const height = (canvas.height = 100);
+
+          context.drawImage(thumbElement, 0, 0, width, height);
+          const thumbData = context.getImageData(0, 0, width, height).data;
+
+          let r = 0,
+            g = 0,
+            b = 0,
+            count = 0;
+
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              // Only count border pixels
+              if (x === 0 || y === width - 1 || y === 0 || y === height - 1) {
+                // Index because data is an Array with RGBA values
+                const i = (y * width + x) * 4;
+                r += thumbData[i];
+                g += thumbData[i + 1];
+                b += thumbData[i + 2];
+                count++;
+              }
+            }
+          }
+
+          r = Math.floor(r / count);
+          g = Math.floor(g / count);
+          b = Math.floor(b / count);
+
+          thumbElement.style.boxShadow = `0px 0px 12px 4px rgb(${r}, ${g}, ${b})`;
+        };
+      }
+
       async function getMediaInfo() {
         const res = await fetch("/media/info");
         const data = await res.json();
@@ -112,7 +150,7 @@
         if (data.status === "inactive") {
           title_element.innerText = "No session yet";
           artist_element.innerText = "-";
-          thumbnail_element.src = "__DEFAULT_THUMB__";
+          found_thumbnail = await setThumbnailSrc(thumbnail_element);
           play_btn.innerHTML = PLAY_PAUSE_LOGO;
           currentTitle = "";
           return;
@@ -128,22 +166,34 @@
           currentTitle = data.title;
           title_element.innerText = data.title || "Unknown";
           artist_element.innerText = data.artist || "Unknown";
-
-          let thumb_src = `/media/thumbnail?t=${Date.now()}`;
-
-          try {
-            const res = await fetch(thumb_src);
-            if (!res.ok) {
-              thumb_src = "__DEFAULT_THUMB__";
-              throw new Error("Error fetch thumbnail");
-            }
-          } catch (e) {
-            thumb_src = "__DEFAULT_THUMB__";
-            console.error("Error: ", e);
-          }
-
-          thumbnail_element.src = thumb_src;
+          found_thumbnail = await setThumbnailSrc(thumbnail_element);
         }
+
+        if (!found_thumbnail) {
+          found_thumbnail = await setThumbnailSrc(thumbnail_element);
+        }
+      }
+
+      async function setThumbnailSrc(thumbnail_element) {
+        let thumb_src = `/media/thumbnail?t=${Date.now()}`;
+        let success = false;
+
+        try {
+          const res = await fetch(thumb_src);
+          if (!res.ok) {
+            thumb_src = "__DEFAULT_THUMB__";
+            throw new Error("Error fetch thumbnail");
+          }
+          success = true;
+        } catch (e) {
+          thumb_src = "__DEFAULT_THUMB__";
+          console.error("Error: ", e);
+          success = false;
+        }
+
+        thumbnail_element.src = thumb_src;
+        setBorderShadowThumbnail(thumbnail_element);
+        return success;
       }
 
       async function loopGetMediaInfo() {
