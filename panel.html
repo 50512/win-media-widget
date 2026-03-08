@@ -22,7 +22,7 @@
         justify-content: center;
         align-items: center;
         gap: var(--button-gaps);
-        background: transparent;
+        background: #1e1e1e;
         margin: 0;
         max-width: 450px;
       }
@@ -146,9 +146,16 @@
         }
       }
 
-      setInterval(getMediaInfo, 1500);
+      async function loopGetMediaInfo() {
+        try {
+          await getMediaInfo();
+        } catch (e) {
+          console.log("ERROR: ", e);
+        }
+        setTimeout(loopGetMediaInfo, 1500);
+      }
 
-      window.onload = getMediaInfo;
+      window.onload = loopGetMediaInfo;
     </script>
   </head>
   <body>
