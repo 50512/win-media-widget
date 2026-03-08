@@ -5,6 +5,15 @@
     <meta charset="UTF-8" />
     <style>
       body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .main {
         font-family: Arial, Helvetica, sans-serif;
 
         --button-gaps: 5px;
@@ -15,7 +24,6 @@
         gap: var(--button-gaps);
         background: transparent;
         margin: 0;
-        height: 100vh;
         max-width: 450px;
       }
 
@@ -144,54 +152,56 @@
     </script>
   </head>
   <body>
-    <div id="media-info">
-      <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
-      <p class="title"><strong id="title-text"></strong></p>
-      <p id="artist"><strong id="artist-text"></strong></p>
-    </div>
+    <div class="main">
+      <div id="media-info">
+        <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
+        <p class="title"><strong id="title-text"></strong></p>
+        <p id="artist"><strong id="artist-text"></strong></p>
+      </div>
 
-    <div class="button-container">
-      <button onclick="sendCmd('prev')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
-        </svg>
-      </button>
+      <div class="button-container">
+        <button onclick="sendCmd('prev')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
+          </svg>
+        </button>
 
-      <button onclick="sendCmd('play')" id="play-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" />
-        </svg>
-      </button>
+        <button onclick="sendCmd('play')" id="play-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" />
+          </svg>
+        </button>
 
-      <button onclick="sendCmd('next')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" />
-        </svg>
-      </button>
-    </div>
+        <button onclick="sendCmd('next')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" />
+          </svg>
+        </button>
+      </div>
 
-    <div class="button-container">
-      <button onclick="sendCmd('vol-down')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M3,9H7L12,4V20L7,15H3V9M14,11H22V13H14V11Z" />
-        </svg>
-      </button>
+      <div class="button-container">
+        <button onclick="sendCmd('vol-down')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3,9H7L12,4V20L7,15H3V9M14,11H22V13H14V11Z" />
+          </svg>
+        </button>
 
-      <button onclick="sendCmd('mute')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path
-            d="M3,9H7L12,4V20L7,15H3V9M16.59,12L14,9.41L15.41,8L18,10.59L20.59,8L22,9.41L19.41,12L22,14.59L20.59,16L18,13.41L15.41,16L14,14.59L16.59,12Z"
-          />
-        </svg>
-      </button>
+        <button onclick="sendCmd('mute')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M3,9H7L12,4V20L7,15H3V9M16.59,12L14,9.41L15.41,8L18,10.59L20.59,8L22,9.41L19.41,12L22,14.59L20.59,16L18,13.41L15.41,16L14,14.59L16.59,12Z"
+            />
+          </svg>
+        </button>
 
-      <button onclick="sendCmd('vol-up')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path
-            d="M3,9H7L12,4V20L7,15H3V9M14,11H17V8H19V11H22V13H19V16H17V13H14V11Z"
-          />
-        </svg>
-      </button>
+        <button onclick="sendCmd('vol-up')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M3,9H7L12,4V20L7,15H3V9M14,11H17V8H19V11H22V13H19V16H17V13H14V11Z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
   </body>
 </html>
