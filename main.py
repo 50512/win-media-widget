@@ -8,7 +8,7 @@ from typing import Annotated
 import pyautogui
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
@@ -83,7 +83,6 @@ async def health():
 @app.get("/media/info")
 async def get_current_media_info():
     manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
-
     session = manager.get_current_session()
 
     if not session:
@@ -104,6 +103,34 @@ async def get_current_media_info():
         "title": media_props.title,
         "artist": media_props.artist,
     }
+
+
+@app.get("/media/thumbnail")
+async def get_media_thumbnail():
+    manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+    session = manager.get_current_session()
+
+    if not session:
+        return Response(status_code=404)
+
+    media_props = await session.try_get_media_properties_async()
+    thumbnail_ref = media_props.thumbnail
+
+    if not thumbnail_ref:
+        return Response(status_code=404)
+
+    stream = await thumbnail_ref.open_read_async()
+
+    buffer = Buffer(stream.size)
+
+    await stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
+
+    reader = DataReader.from_buffer(buffer)
+    byte_array = bytearray(buffer.length)
+
+    reader.read_bytes(byte_array)
+
+    return Response(content=bytes(byte_array), media_type="image/jpeg")
 
 
 @app.get("/media/{action}", responses=ERROR_RESPONSES)
