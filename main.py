@@ -9,6 +9,11 @@ import pyautogui
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.responses import HTMLResponse
+from winrt.windows.media.control import (
+    GlobalSystemMediaTransportControlsSessionManager,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+)
+from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
 
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
@@ -75,6 +80,32 @@ async def health():
     return {"status": "OK"}
 
 
+@app.get("/media/info")
+async def get_current_media_info():
+    manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+
+    session = manager.get_current_session()
+
+    if not session:
+        return {"status": "inactive"}
+
+    media_props = await session.try_get_media_properties_async()
+
+    playback_info = session.get_playback_info()
+
+    is_playing = (
+        playback_info.playback_status
+        == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING
+    )
+
+    return {
+        "status": "active",
+        "is_playing": is_playing,
+        "title": media_props.title,
+        "artist": media_props.artist,
+    }
+
+
 @app.get("/media/{action}", responses=ERROR_RESPONSES)
 async def control_media(action: str, x_token: Annotated[str | None, Header()]):
     verify_token(x_token)
@@ -106,4 +137,4 @@ if __name__ == "__main__":
     if sys.executable.endswith("pythonw.exe"):
         set_logger()
 
-    uvicorn.run(app, host=IP_API, port=25012)
+    uvicorn.run(app, host=IP_API, port=25013)
