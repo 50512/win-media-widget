@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <style>
       body {
+        font-family: Arial, Helvetica, sans-serif;
+
         --button-gaps: 5px;
         display: flex;
         flex-direction: column;
@@ -14,11 +16,35 @@
         background: transparent;
         margin: 0;
         height: 100vh;
+        max-width: 450px;
+      }
 
-        div {
-          display: flex;
-          gap: var(--button-gaps);
+      .button-container {
+        display: flex;
+        gap: var(--button-gaps);
+      }
+
+      #media-info {
+        color: #e6e6e6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        padding: 1rem;
+
+        p {
+          text-wrap: wrap;
+          margin: 1rem 0px 0px 0px;
         }
+      }
+
+      #thumbnail {
+        aspect-ratio: 1 / 1;
+        width: 150px;
+        height: 150px;
+        object-fit: contain;
+        background-color: rgba(255, 255, 255, 0.07);
+        box-shadow: 0px 0px 12px 2px #ffffff;
       }
 
       button {
@@ -45,7 +71,19 @@
         transform: scale(0.95);
       }
     </style>
+
     <script>
+      let currentTitle = "";
+
+      const PLAY_PAUSE_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
+
+      const PLAY_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>';
+
+      const PAUSE_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>';
+
       function sendCmd(action) {
         fetch("/media/" + action, {
           method: "GET",
@@ -53,17 +91,73 @@
           headers: { "X-Token": "__TOKEN_HERE__" },
         }).catch((err) => console.error("Error:", err));
       }
+
+      async function getMediaInfo() {
+        const res = await fetch("/media/info");
+        const data = await res.json();
+
+        const title_element = document.getElementById("title-text");
+        const artist_element = document.getElementById("artist-text");
+        const thumbnail_element = document.getElementById("thumbnail");
+        const play_btn = document.getElementById("play-btn");
+
+        if (data.status === "inactive") {
+          title_element.innerText = "No session yet";
+          artist_element.innerText = "-";
+          thumbnail_element.src = "__DEFAULT_THUMB__";
+          play_btn.innerHTML = PLAY_PAUSE_LOGO;
+          currentTitle = "";
+          return;
+        }
+
+        if (data.is_playing) {
+          play_btn.innerHTML = PAUSE_LOGO;
+        } else {
+          play_btn.innerHTML = PLAY_LOGO;
+        }
+
+        if (data.title !== currentTitle) {
+          currentTitle = data.title;
+          title_element.innerText = data.title || "Unknown";
+          artist_element.innerText = data.artist || "Unknown";
+
+          let thumb_src = `/media/thumbnail?t=${Date.now()}`;
+
+          try {
+            const res = await fetch(thumb_src);
+            if (!res.ok) {
+              thumb_src = "__DEFAULT_THUMB__";
+              throw new Error("Error fetch thumbnail");
+            }
+          } catch (e) {
+            thumb_src = "__DEFAULT_THUMB__";
+            console.error("Error: ", e);
+          }
+
+          thumbnail_element.src = thumb_src;
+        }
+      }
+
+      setInterval(getMediaInfo, 1500);
+
+      window.onload = getMediaInfo;
     </script>
   </head>
   <body>
-    <div>
+    <div id="media-info">
+      <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
+      <p class="title"><strong id="title-text"></strong></p>
+      <p id="artist"><strong id="artist-text"></strong></p>
+    </div>
+
+    <div class="button-container">
       <button onclick="sendCmd('prev')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
         </svg>
       </button>
 
-      <button onclick="sendCmd('play')">
+      <button onclick="sendCmd('play')" id="play-btn">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" />
         </svg>
@@ -76,7 +170,7 @@
       </button>
     </div>
 
-    <div>
+    <div class="button-container">
       <button onclick="sendCmd('vol-down')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M3,9H7L12,4V20L7,15H3V9M14,11H22V13H14V11Z" />
