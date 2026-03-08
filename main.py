@@ -166,4 +166,4 @@ if __name__ == "__main__":
     if sys.executable.endswith("pythonw.exe"):
         set_logger()
 
-    uvicorn.run(app, host=IP_API, port=25013)
+    uvicorn.run(app, host=IP_API, port=25012)
