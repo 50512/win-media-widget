@@ -22,6 +22,36 @@ Sea cual sea el método usado, debes crear la variable de entorno de usuario `ME
 
 Otra variable a usar (pero opcional) es `SELF_API_IP`, para solo aceptar conexiones a través de la interfaz especifica, de no encontrarse, se usara la interfaz `0.0.0.0`.
 
+## Media panel
+
+Una de las características principales es la presencia de un panel web, que sirve para visualizar el estado de la reproducción y controlarlo.
+
+El panel posee 3 estados:
+
+### Sin sesión multimedia
+
+![Panel sin sesión multimedia](./assets/panel-without-session.png)
+
+Este estado aparece cuando no hay ninguna sesión multimedia reconocida por Windows. Se muestra una caratula por defecto (la misma se usa si no hay caratula disponible en la reproducción) y un mensaje de que no todavía no hay sesión. En este estado el botón `play-pause` tiene un logo combinado por la falta de estado.
+
+### Reproduciendo
+
+![Panel reproduciendo música](./assets/panel-playing.png)
+
+Lo mas llamativo de este estado es el poder ver la caratula de la canción o media en reproducción, con un efecto de _Ambilight_, formado por el uso de 4 `box-shadow` que promedian la información de color de un "anillo interno" dividido en cuartos. Gracias a eso se genera ese curioso efecto al rededor de la caratula.
+
+En este estado, el botón `play-pause` tiene el logo de "pausa", representando la acción que va a realizar al presionarse.
+
+### En pausa
+
+![Panel en pausa](./assets/panel-no-playing.png)
+
+Al estar en pausa, se deshabilita el efecto de luz de la caratula, y se cambia el logo del botón `play-pause`.
+
+#### Punto importante
+
+Los botones del panel están mapeados a los end points de [acciones multimedia](#mediaaction), y **siempre están activos**, sin importar el estado.
+
 ## EndPoints
 
 Este servicio se encarga de mapear ciertos EndPoints hacia teclas de Windows en la maquina que ejecuta el servidor.
@@ -32,7 +62,38 @@ EndPoint de `health` para poder verificar el estado del servicio.
 
 ### `/panel`
 
-Un simple panel web con los 6 botones de acción, recomendado para usar como `iframe` en otros servicios (Dashy en nuestro caso).
+Donde se expone el [panel HTML](#media-panel).
+
+### `/media/info`
+
+Obtiene la información de la sesión multimedia en curso (de existir).
+
+Hay 2 respuesta posibles:
+
+1. Sin sesión:
+
+```json
+{
+  "status": "inactive"
+}
+```
+
+2. Con sesión:
+
+```json
+{
+   "status": "active",
+   "is_playing": is_playing,     // Booleano del estado de reproducción
+   "title": media_props.title,   // Titulo de la canción
+   "artist": media_props.artist, // Artista de la canción
+}
+```
+
+### `/media/thumbnail`
+
+Debido a la forma en que Windows almacena las caratulas, es necesario un end point dedicado a la caratula.
+
+Este end point devuelve la imagen almacenada en memoria correspondiente a la caratula.
 
 ### `/media/{action}`
 
