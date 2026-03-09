@@ -15,6 +15,7 @@
 
       .main {
         font-family: Arial, Helvetica, sans-serif;
+        padding: 1rem;
 
         --button-gaps: 5px;
         display: flex;
@@ -42,16 +43,60 @@
 
         p {
           text-wrap: wrap;
+          z-index: 2;
           margin: 1rem 0px 0px 0px;
+
+          &.artist {
+            font-size: 0.85rem;
+          }
         }
       }
 
-      #thumbnail {
-        aspect-ratio: 1 / 1;
+      .thumb-container {
+        position: relative;
         width: 150px;
         height: 150px;
+
+        --shadow-top-left: rgba(255, 255, 255, 0.2);
+        --shadow-top-right: rgba(255, 255, 255, 0.2);
+        --shadow-bottom-left: rgba(255, 255, 255, 0.2);
+        --shadow-bottom-right: rgba(255, 255, 255, 0.2);
+      }
+
+      .thumb-container.no-shadow::after {
+        box-shadow: none;
+      }
+
+      #thumbnail {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        width: 100%;
+        height: 100%;
         object-fit: contain;
         background-color: rgba(255, 255, 255, 0.07);
+
+        z-index: 2;
+
+        transition: box-shadow 0.8s ease-in-out;
+      }
+
+      .thumb-container::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        box-shadow:
+          -15px -15px 45px var(--shadow-top-left),
+          15px -15px 45px var(--shadow-top-right),
+          -15px 15px 45px var(--shadow-bottom-left),
+          15px 15px 45px var(--shadow-bottom-right);
+
+        filter: saturate(1.8) brightness(1.1);
+        transition: box-shadow 0.8s ease-in-out;
       }
 
       button {
@@ -105,37 +150,80 @@
         const context = canvas.getContext("2d", { willReadFrequently: true });
 
         thumbElement.onload = () => {
-          const width = (canvas.width = 100);
-          const height = (canvas.height = 100);
+          const width = (canvas.width = 50);
+          const height = (canvas.height = 50);
 
           context.drawImage(thumbElement, 0, 0, width, height);
           const thumbData = context.getImageData(0, 0, width, height).data;
 
-          let r = 0,
-            g = 0,
-            b = 0,
-            count = 0;
+          let top_left = { r: 0, g: 0, b: 0, count: 0 },
+            top_right = { r: 0, g: 0, b: 0, count: 0 },
+            bottom_left = { r: 0, g: 0, b: 0, count: 0 },
+            bottom_right = { r: 0, g: 0, b: 0, count: 0 };
 
-          for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-              // Only count border pixels
-              if (x === 0 || y === width - 1 || y === 0 || y === height - 1) {
-                // Index because data is an Array with RGBA values
-                const i = (y * width + x) * 4;
-                r += thumbData[i];
-                g += thumbData[i + 1];
-                b += thumbData[i + 2];
-                count++;
-              }
+          const INNER_START = 2;
+          const INNER_END = 10;
+
+          for (let i = 0; i < thumbData.length; i += 4) {
+            const y = Math.floor(i / 4 / width);
+            const x = (i / 4) % width;
+
+            // Solo el margen entre INNER_START e INNER_END
+            if (
+              (x >= INNER_START && x < INNER_END) || // Lado izquierdo
+              (x >= width - INNER_END && x < width - INNER_START) || // Lado derecho
+              (y >= INNER_START && y < INNER_END) || // Lado superior
+              (y >= height - INNER_END && y < height - INNER_START) // Lado inferior
+            ) {
+              const isTop = y < height / 2;
+              const isLeft = x < width / 2;
+
+              let target;
+              if (isTop && isLeft) target = top_left;
+              else if (isTop && !isLeft) target = top_right;
+              else if (!isTop && isLeft) target = bottom_left;
+              else target = bottom_right;
+
+              target.r += thumbData[i];
+              target.g += thumbData[i + 1];
+              target.b += thumbData[i + 2];
+              target.count++;
             }
           }
 
-          r = Math.floor(r / count);
-          g = Math.floor(g / count);
-          b = Math.floor(b / count);
+          const colorTopLeft = `rgba(${Math.floor(top_left.r / top_left.count)}, ${Math.floor(top_left.g / top_left.count)}, ${Math.floor(top_left.b / top_left.count)}, 0.7)`;
+          const colorTopRight = `rgba(${Math.floor(top_right.r / top_right.count)}, ${Math.floor(top_right.g / top_right.count)}, ${Math.floor(top_right.b / top_right.count)}, 0.7)`;
+          const colorBottomLeft = `rgba(${Math.floor(bottom_left.r / bottom_left.count)}, ${Math.floor(bottom_left.g / bottom_left.count)}, ${Math.floor(bottom_left.b / bottom_left.count)}, 0.7)`;
+          const colorBottomRight = `rgba(${Math.floor(bottom_right.r / bottom_right.count)}, ${Math.floor(bottom_right.g / bottom_right.count)}, ${Math.floor(bottom_right.b / bottom_right.count)}, 0.7)`;
 
-          thumbElement.style.boxShadow = `0px 0px 12px 4px rgb(${r}, ${g}, ${b})`;
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-top-left",
+            colorTopLeft,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-top-right",
+            colorTopRight,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-bottom-left",
+            colorBottomLeft,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-bottom-right",
+            colorBottomRight,
+          );
         };
+      }
+
+      function disableBorderShadowThumbnail(thumbElement) {
+        // Busca hacia arriba en el árbol del DOM hasta encontrar el contenedor principal
+        const container = thumbElement.closest(".thumb-container");
+        if (container) container.classList.add("no-shadow");
+      }
+
+      function enableBorderShadowThumbnail(thumbElement) {
+        const container = thumbElement.closest(".thumb-container");
+        if (container) container.classList.remove("no-shadow");
       }
 
       async function getMediaInfo() {
@@ -156,21 +244,26 @@
           return;
         }
 
+        if (!found_thumbnail) {
+          found_thumbnail = await setThumbnailSrc(thumbnail_element);
+        }
+
         if (data.is_playing) {
           play_btn.innerHTML = PAUSE_LOGO;
+          enableBorderShadowThumbnail(thumbnail_element);
         } else {
           play_btn.innerHTML = PLAY_LOGO;
+          disableBorderShadowThumbnail(thumbnail_element);
         }
 
         if (data.title !== currentTitle) {
           currentTitle = data.title;
           title_element.innerText = data.title || "Unknown";
           artist_element.innerText = data.artist || "Unknown";
-          found_thumbnail = await setThumbnailSrc(thumbnail_element);
-        }
 
-        if (!found_thumbnail) {
-          found_thumbnail = await setThumbnailSrc(thumbnail_element);
+          found_thumbnail = true;
+
+          setTimeout(async () => (found_thumbnail = false), 2000);
         }
       }
 
@@ -200,7 +293,7 @@
         try {
           await getMediaInfo();
         } catch (e) {
-          console.log("ERROR: ", e);
+          console.error("ERROR: ", e);
         }
         setTimeout(loopGetMediaInfo, 1500);
       }
@@ -211,9 +304,12 @@
   <body>
     <div class="main">
       <div id="media-info">
-        <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
+        <div class="thumb-container">
+          <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
+        </div>
+
         <p class="title"><strong id="title-text"></strong></p>
-        <p id="artist"><strong id="artist-text"></strong></p>
+        <p class="artist"><strong id="artist-text"></strong></p>
       </div>
 
       <div class="button-container">
