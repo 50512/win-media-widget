@@ -129,6 +129,11 @@
       let currentTitle = "";
       let found_thumbnail = false;
 
+      const globalCanvas = document.createElement("canvas");
+      const globalCanvasContext = globalCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+
       const PLAY_PAUSE_LOGO =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
 
@@ -147,15 +152,17 @@
       }
 
       function setBorderShadowThumbnail(thumbElement) {
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-
         thumbElement.onload = () => {
-          const width = (canvas.width = 50);
-          const height = (canvas.height = 50);
+          const width = (globalCanvas.width = 50);
+          const height = (globalCanvas.height = 50);
 
-          context.drawImage(thumbElement, 0, 0, width, height);
-          const thumbData = context.getImageData(0, 0, width, height).data;
+          globalCanvasContext.drawImage(thumbElement, 0, 0, width, height);
+          const thumbData = globalCanvasContext.getImageData(
+            0,
+            0,
+            width,
+            height,
+          ).data;
 
           let top_left = { r: 0, g: 0, b: 0, count: 0 },
             top_right = { r: 0, g: 0, b: 0, count: 0 },
@@ -213,6 +220,8 @@
             "--shadow-bottom-right",
             colorBottomRight,
           );
+
+          globalCanvasContext.clearRect(0, 0, width, height);
         };
       }
 
