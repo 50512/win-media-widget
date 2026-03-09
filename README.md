@@ -1,4 +1,4 @@
-# Media API para Windows
+# Widget Multimedia para Windows
 
 ## Variables de entorno
 
