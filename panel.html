@@ -24,6 +24,7 @@
         align-items: center;
         gap: var(--button-gaps);
         background: transparent;
+        background-color: #121212;
         margin: 0;
         max-width: 450px;
       }
@@ -90,10 +91,10 @@
         height: 100%;
 
         box-shadow:
-          -15px -15px 45px var(--shadow-top-left),
-          15px -15px 45px var(--shadow-top-right),
-          -15px 15px 45px var(--shadow-bottom-left),
-          15px 15px 45px var(--shadow-bottom-right);
+          -15px -15px 25px var(--shadow-top-left),
+          15px -15px 25px var(--shadow-top-right),
+          -15px 15px 25px var(--shadow-bottom-left),
+          15px 15px 25px var(--shadow-bottom-right);
 
         filter: saturate(1.8) brightness(1.1);
         transition: box-shadow 0.8s ease-in-out;
@@ -191,10 +192,10 @@
             }
           }
 
-          const colorTopLeft = `rgba(${Math.floor(top_left.r / top_left.count)}, ${Math.floor(top_left.g / top_left.count)}, ${Math.floor(top_left.b / top_left.count)}, 0.7)`;
-          const colorTopRight = `rgba(${Math.floor(top_right.r / top_right.count)}, ${Math.floor(top_right.g / top_right.count)}, ${Math.floor(top_right.b / top_right.count)}, 0.7)`;
-          const colorBottomLeft = `rgba(${Math.floor(bottom_left.r / bottom_left.count)}, ${Math.floor(bottom_left.g / bottom_left.count)}, ${Math.floor(bottom_left.b / bottom_left.count)}, 0.7)`;
-          const colorBottomRight = `rgba(${Math.floor(bottom_right.r / bottom_right.count)}, ${Math.floor(bottom_right.g / bottom_right.count)}, ${Math.floor(bottom_right.b / bottom_right.count)}, 0.7)`;
+          const colorTopLeft = `rgba(${Math.floor(top_left.r / top_left.count)}, ${Math.floor(top_left.g / top_left.count)}, ${Math.floor(top_left.b / top_left.count)}, 0.5)`;
+          const colorTopRight = `rgba(${Math.floor(top_right.r / top_right.count)}, ${Math.floor(top_right.g / top_right.count)}, ${Math.floor(top_right.b / top_right.count)}, 0.5)`;
+          const colorBottomLeft = `rgba(${Math.floor(bottom_left.r / bottom_left.count)}, ${Math.floor(bottom_left.g / bottom_left.count)}, ${Math.floor(bottom_left.b / bottom_left.count)}, 0.5)`;
+          const colorBottomRight = `rgba(${Math.floor(bottom_right.r / bottom_right.count)}, ${Math.floor(bottom_right.g / bottom_right.count)}, ${Math.floor(bottom_right.b / bottom_right.count)}, 0.5)`;
 
           thumbElement.parentElement.style.setProperty(
             "--shadow-top-left",
