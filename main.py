@@ -15,6 +15,8 @@ from winrt.windows.media.control import (
 )
 from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
 
+import argparse
+
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
 
@@ -160,10 +162,20 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="Windows Media Widget", description="Expose a web panel to view and control the media session of windows")
+    parser.add_argument("-p", "--port", type=int, help="Port to expose the service (default: 25012)")
+    
+    args = parser.parse_args()
+    
     if not SECRET_TOKEN:
         raise EnvironmentError("Token no existente")
 
     if sys.executable.endswith("pythonw.exe"):
         set_logger()
+    
+    if not args.port:
+        port = 25012
+    else:
+        port = args.port
 
-    uvicorn.run(app, host=IP_API, port=25012)
+    uvicorn.run(app, host=IP_API, port=port)
