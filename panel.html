@@ -134,6 +134,9 @@
         willReadFrequently: true,
       });
 
+      const width = (globalCanvas.width = 50);
+      const height = (globalCanvas.height = 50);
+
       const PLAY_PAUSE_LOGO =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
 
@@ -153,9 +156,6 @@
 
       function setBorderShadowThumbnail(thumbElement) {
         thumbElement.onload = () => {
-          const width = (globalCanvas.width = 50);
-          const height = (globalCanvas.height = 50);
-
           globalCanvasContext.drawImage(thumbElement, 0, 0, width, height);
           const thumbData = globalCanvasContext.getImageData(
             0,
