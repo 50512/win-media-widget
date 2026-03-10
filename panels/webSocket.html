@@ -13,6 +13,11 @@
         margin: 0;
       }
 
+      input,
+      button {
+        outline: none;
+      }
+
       .main {
         font-family: Arial, Helvetica, sans-serif;
         padding: 1rem;
@@ -29,9 +34,33 @@
         max-width: 450px;
       }
 
-      .button-container {
+      .action-button-container {
         display: flex;
         gap: var(--button-gaps);
+
+        button {
+          padding: 10px 15px;
+          cursor: pointer;
+          border-radius: 8px;
+          border: none;
+          background: rgba(255, 255, 255, 0.1);
+          transition: background 0.2s;
+
+          svg {
+            --size: 24px;
+            width: var(--size);
+            height: var(--size);
+            fill: #e6e6e6;
+          }
+        }
+
+        button:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        button:active {
+          transform: scale(0.95);
+        }
       }
 
       #media-info {
@@ -100,28 +129,71 @@
         transition: box-shadow 0.8s ease-in-out;
       }
 
-      button {
-        padding: 10px 15px;
-        cursor: pointer;
-        border-radius: 8px;
+      #token-modal {
+        max-width: 90vw;
         border: none;
-        background: rgba(255, 255, 255, 0.1);
-        transition: background 0.2s;
+        border-radius: 10px;
 
-        svg {
-          --size: 24px;
-          width: var(--size);
-          height: var(--size);
-          fill: #e6e6e6;
+        background-color: #121212;
+        color: #e6e6e6;
+
+        box-shadow: 0px 0px 5px #40d2ff;
+
+        h2 {
+          width: 100%;
+          margin-top: 0px;
+          margin-bottom: 0.5rem;
+          padding-bottom: 0.3rem;
+          text-wrap: wrap;
+
+          border-bottom: 0.5px solid #40d2ff;
         }
-      }
 
-      button:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
+        &::backdrop {
+          backdrop-filter: blur(3px);
+        }
 
-      button:active {
-        transform: scale(0.95);
+        .modal-button-container {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        button {
+          padding: 0.5rem;
+          border-radius: 5px;
+          border: none;
+          outline: none;
+
+          text-decoration: none;
+          font-size: 1rem;
+
+          background-color: #4f4f4f;
+          transition:
+            filter 0.5s,
+            box-shadow 0.5s;
+
+          box-shadow: 0px 0px 5px #40d2ff;
+          color: #ffffff;
+
+          &:hover {
+            cursor: pointer;
+            filter: brightness(0.8);
+            box-shadow: none;
+          }
+        }
+
+        input {
+          width: 100%;
+          background: none;
+          border: none;
+          border-bottom: 0.5px solid #40d2ff;
+          color: #e6e6e6;
+          margin: 0.6rem 0rem;
+
+          &::placeholder {
+            color: #e6e6e6;
+          }
+        }
       }
     </style>
 
@@ -131,15 +203,22 @@
       let ws;
       let wsThumb;
 
+      const MEDIA_TOKEN_NAME = "MEDIA_API_TOKEN";
+
+      const MODAL_MESSAGES = {
+        default: "Please, enter the API TOKEN",
+        unauthorized: "Invalid token, please enter the API TOKEN",
+      };
+
       const DEFAULT_THUMB_SRC = "__DEFAULT_THUMB__";
 
-      const globalCanvas = document.createElement("canvas");
-      const globalCanvasContext = globalCanvas.getContext("2d", {
+      const GLOBAL_CANVAS = document.createElement("canvas");
+      const GLOBAL_CANVAS_CONTEXT = GLOBAL_CANVAS.getContext("2d", {
         willReadFrequently: true,
       });
 
-      const width = (globalCanvas.width = 50);
-      const height = (globalCanvas.height = 50);
+      const WIDTH = (GLOBAL_CANVAS.width = 50);
+      const HEIGHT = (GLOBAL_CANVAS.height = 50);
 
       const PLAY_PAUSE_LOGO =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
@@ -151,21 +230,52 @@
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>';
 
       function sendCmd(action) {
+        const token = localStorage.getItem(MEDIA_TOKEN_NAME);
+        const tokenModal = document.getElementById("token-modal");
+        const titleModalElement = document.querySelector("#token-modal>h2");
+
+        if (!token) {
+          titleModalElement.innerText = MODAL_MESSAGES.default;
+          tokenModal.showModal();
+          return;
+        }
+
         fetch("/media/" + action, {
           method: "GET",
           // Marcador del token (reemplazado en Python)
-          headers: { "X-Token": "__TOKEN_HERE__" },
-        }).catch((err) => console.error("Error:", err));
+          headers: { "X-Token": token },
+        })
+          .then((res) => {
+            if (res.status === 401) {
+              localStorage.removeItem(MEDIA_TOKEN_NAME);
+              titleModalElement.innerText = MODAL_MESSAGES.unauthorized;
+              tokenModal.showModal();
+            }
+          })
+          .catch((err) => console.error(err));
+      }
+
+      function saveToken() {
+        const tokenForm = document.getElementById("token-form");
+        const tokenInput = document.getElementById("token-input");
+
+        const newToken = tokenInput.value.trim();
+
+        if (newToken) {
+          localStorage.setItem(MEDIA_TOKEN_NAME, newToken);
+        }
+
+        tokenForm.reset();
       }
 
       function setBorderShadowThumbnail(thumbElement) {
         thumbElement.onload = () => {
-          globalCanvasContext.drawImage(thumbElement, 0, 0, width, height);
-          const thumbData = globalCanvasContext.getImageData(
+          GLOBAL_CANVAS_CONTEXT.drawImage(thumbElement, 0, 0, WIDTH, HEIGHT);
+          const thumbData = GLOBAL_CANVAS_CONTEXT.getImageData(
             0,
             0,
-            width,
-            height,
+            WIDTH,
+            HEIGHT,
           ).data;
 
           let top_left = { r: 0, g: 0, b: 0, count: 0 },
@@ -177,18 +287,18 @@
           const INNER_END = 10;
 
           for (let i = 0; i < thumbData.length; i += 4) {
-            const y = Math.floor(i / 4 / width);
-            const x = (i / 4) % width;
+            const y = Math.floor(i / 4 / WIDTH);
+            const x = (i / 4) % WIDTH;
 
             // Solo el margen entre INNER_START e INNER_END
             if (
               (x >= INNER_START && x < INNER_END) || // Lado izquierdo
-              (x >= width - INNER_END && x < width - INNER_START) || // Lado derecho
+              (x >= WIDTH - INNER_END && x < WIDTH - INNER_START) || // Lado derecho
               (y >= INNER_START && y < INNER_END) || // Lado superior
-              (y >= height - INNER_END && y < height - INNER_START) // Lado inferior
+              (y >= HEIGHT - INNER_END && y < HEIGHT - INNER_START) // Lado inferior
             ) {
-              const isTop = y < height / 2;
-              const isLeft = x < width / 2;
+              const isTop = y < HEIGHT / 2;
+              const isLeft = x < WIDTH / 2;
 
               let target;
               if (isTop && isLeft) target = top_left;
@@ -225,7 +335,7 @@
             colorBottomRight,
           );
 
-          globalCanvasContext.clearRect(0, 0, width, height);
+          GLOBAL_CANVAS_CONTEXT.clearRect(0, 0, WIDTH, HEIGHT);
         };
       }
 
@@ -350,7 +460,7 @@
         <p class="artist"><strong id="artist-text"></strong></p>
       </div>
 
-      <div class="button-container">
+      <div class="action-button-container">
         <button onclick="sendCmd('prev')">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
@@ -370,7 +480,7 @@
         </button>
       </div>
 
-      <div class="button-container">
+      <div class="action-button-container">
         <button onclick="sendCmd('vol-down')">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path d="M3,9H7L12,4V20L7,15H3V9M14,11H22V13H14V11Z" />
@@ -393,6 +503,21 @@
           </svg>
         </button>
       </div>
+
+      <dialog id="token-modal">
+        <h2>Please, enter the API TOKEN</h2>
+        <form method="dialog" id="token-form" onsubmit="saveToken()">
+          <input
+            type="text"
+            placeholder="Your Media API Token"
+            id="token-input"
+            required
+          />
+          <div class="modal-button-container">
+            <button type="submit">Save Token</button>
+          </div>
+        </form>
+      </dialog>
     </div>
   </body>
 </html>
