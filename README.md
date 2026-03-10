@@ -24,6 +24,14 @@ Otra variable a usar (pero opcional) es `SELF_API_IP`, para solo aceptar conexio
 
 También esta esta variable, que es netamente de desarrollo, `DEBUG`. Esta variable permite habilitar el "hot reload" de los paneles `HTML`.
 
+## Argumentos de programa
+
+Para facilitar la experiencia de desarrollo, se agregó el siguiente argumento:
+
+- `-p`, `--port`: Para definir el puerto del servidor (`25012` por defecto).
+
+De esta manera no es necesario cambiar el puerto manualmente en el código (principalmente cuando ya hay una instancia corriendo como servicio de fondo).
+
 ## Media panel
 
 Una de las características principales es la presencia de un panel web, que sirve para visualizar el estado de la reproducción y controlarlo.
