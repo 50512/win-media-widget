@@ -42,7 +42,7 @@ ERROR_RESPONSES = {
 }
 
 TEMPLATE_HTML = (
-    Path("./panels/setInterval.html")
+    Path("./panels/polling.html")
     .read_text(encoding="utf-8")
     .replace("__TOKEN_HERE__", SECRET_TOKEN)
     .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
@@ -159,7 +159,7 @@ async def get_current_media_info():
 async def control_panel():
     if DEBUG_MODE:
         return (
-            Path("./panels/setInterval.html")
+            Path("./panels/polling.html")
             .read_text(encoding="utf-8")
             .replace("__TOKEN_HERE__", SECRET_TOKEN)
             .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
@@ -167,7 +167,7 @@ async def control_panel():
     return TEMPLATE_HTML
 
 
-@app.get("/panel-ws", response_class=HTMLResponse)
+@app.get("/ws/panel", response_class=HTMLResponse)
 async def control_panel():
     if DEBUG_MODE:
         return (
