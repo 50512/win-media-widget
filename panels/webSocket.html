@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <title>Media Control Panel</title>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .main {
+        font-family: Arial, Helvetica, sans-serif;
+        padding: 1rem;
+
+        --button-gaps: 5px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: var(--button-gaps);
+        background: transparent;
+        /* background-color: #121212; */
+        margin: 0;
+        max-width: 450px;
+      }
+
+      .button-container {
+        display: flex;
+        gap: var(--button-gaps);
+      }
+
+      #media-info {
+        color: #e6e6e6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        padding: 1rem;
+
+        p {
+          text-wrap: wrap;
+          z-index: 2;
+          margin: 1rem 0px 0px 0px;
+
+          &.artist {
+            font-size: 0.85rem;
+          }
+        }
+      }
+
+      .thumb-container {
+        position: relative;
+        width: 150px;
+        height: 150px;
+
+        --shadow-top-left: rgba(255, 255, 255, 0.2);
+        --shadow-top-right: rgba(255, 255, 255, 0.2);
+        --shadow-bottom-left: rgba(255, 255, 255, 0.2);
+        --shadow-bottom-right: rgba(255, 255, 255, 0.2);
+      }
+
+      .thumb-container.no-shadow::after {
+        box-shadow: none;
+      }
+
+      #thumbnail {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background-color: rgba(255, 255, 255, 0.07);
+
+        z-index: 2;
+
+        transition: box-shadow 0.8s ease-in-out;
+      }
+
+      .thumb-container::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        box-shadow:
+          -15px -15px 25px var(--shadow-top-left),
+          15px -15px 25px var(--shadow-top-right),
+          -15px 15px 25px var(--shadow-bottom-left),
+          15px 15px 25px var(--shadow-bottom-right);
+
+        filter: saturate(1.8) brightness(1.1);
+        transition: box-shadow 0.8s ease-in-out;
+      }
+
+      button {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-radius: 8px;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        transition: background 0.2s;
+
+        svg {
+          --size: 24px;
+          width: var(--size);
+          height: var(--size);
+          fill: #e6e6e6;
+        }
+      }
+
+      button:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      button:active {
+        transform: scale(0.95);
+      }
+    </style>
+
+    <script>
+      let currentTitle = "";
+
+      let ws;
+      let wsThumb;
+
+      const DEFAULT_THUMB_SRC = "__DEFAULT_THUMB__";
+
+      const globalCanvas = document.createElement("canvas");
+      const globalCanvasContext = globalCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+
+      const width = (globalCanvas.width = 50);
+      const height = (globalCanvas.height = 50);
+
+      const PLAY_PAUSE_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" /></svg>';
+
+      const PLAY_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>';
+
+      const PAUSE_LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>';
+
+      function sendCmd(action) {
+        fetch("/media/" + action, {
+          method: "GET",
+          // Marcador del token (reemplazado en Python)
+          headers: { "X-Token": "__TOKEN_HERE__" },
+        }).catch((err) => console.error("Error:", err));
+      }
+
+      function setBorderShadowThumbnail(thumbElement) {
+        thumbElement.onload = () => {
+          globalCanvasContext.drawImage(thumbElement, 0, 0, width, height);
+          const thumbData = globalCanvasContext.getImageData(
+            0,
+            0,
+            width,
+            height,
+          ).data;
+
+          let top_left = { r: 0, g: 0, b: 0, count: 0 },
+            top_right = { r: 0, g: 0, b: 0, count: 0 },
+            bottom_left = { r: 0, g: 0, b: 0, count: 0 },
+            bottom_right = { r: 0, g: 0, b: 0, count: 0 };
+
+          const INNER_START = 2;
+          const INNER_END = 10;
+
+          for (let i = 0; i < thumbData.length; i += 4) {
+            const y = Math.floor(i / 4 / width);
+            const x = (i / 4) % width;
+
+            // Solo el margen entre INNER_START e INNER_END
+            if (
+              (x >= INNER_START && x < INNER_END) || // Lado izquierdo
+              (x >= width - INNER_END && x < width - INNER_START) || // Lado derecho
+              (y >= INNER_START && y < INNER_END) || // Lado superior
+              (y >= height - INNER_END && y < height - INNER_START) // Lado inferior
+            ) {
+              const isTop = y < height / 2;
+              const isLeft = x < width / 2;
+
+              let target;
+              if (isTop && isLeft) target = top_left;
+              else if (isTop && !isLeft) target = top_right;
+              else if (!isTop && isLeft) target = bottom_left;
+              else target = bottom_right;
+
+              target.r += thumbData[i];
+              target.g += thumbData[i + 1];
+              target.b += thumbData[i + 2];
+              target.count++;
+            }
+          }
+
+          const colorTopLeft = `rgba(${Math.floor(top_left.r / top_left.count)}, ${Math.floor(top_left.g / top_left.count)}, ${Math.floor(top_left.b / top_left.count)}, 0.5)`;
+          const colorTopRight = `rgba(${Math.floor(top_right.r / top_right.count)}, ${Math.floor(top_right.g / top_right.count)}, ${Math.floor(top_right.b / top_right.count)}, 0.5)`;
+          const colorBottomLeft = `rgba(${Math.floor(bottom_left.r / bottom_left.count)}, ${Math.floor(bottom_left.g / bottom_left.count)}, ${Math.floor(bottom_left.b / bottom_left.count)}, 0.5)`;
+          const colorBottomRight = `rgba(${Math.floor(bottom_right.r / bottom_right.count)}, ${Math.floor(bottom_right.g / bottom_right.count)}, ${Math.floor(bottom_right.b / bottom_right.count)}, 0.5)`;
+
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-top-left",
+            colorTopLeft,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-top-right",
+            colorTopRight,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-bottom-left",
+            colorBottomLeft,
+          );
+          thumbElement.parentElement.style.setProperty(
+            "--shadow-bottom-right",
+            colorBottomRight,
+          );
+
+          globalCanvasContext.clearRect(0, 0, width, height);
+        };
+      }
+
+      function disableBorderShadowThumbnail(thumbElement) {
+        // Busca hacia arriba en el árbol del DOM hasta encontrar el contenedor principal
+        const container = thumbElement.closest(".thumb-container");
+        if (container) container.classList.add("no-shadow");
+      }
+
+      function enableBorderShadowThumbnail(thumbElement) {
+        const container = thumbElement.closest(".thumb-container");
+        if (container) container.classList.remove("no-shadow");
+      }
+
+      async function defaultStatePanel(
+        title_element,
+        artist_element,
+        play_btn,
+      ) {
+        title_element.innerText = "No session yet";
+        artist_element.innerText = "-";
+        play_btn.innerHTML = PLAY_PAUSE_LOGO;
+        currentTitle = "";
+      }
+
+      async function connectMediaInfoWebSocket() {
+        const title_element = document.getElementById("title-text");
+        const artist_element = document.getElementById("artist-text");
+        const thumbnail_element = document.getElementById("thumbnail");
+        const play_btn = document.getElementById("play-btn");
+
+        const protocol =
+          globalThis.location.protocol === "https:" ? "wss://" : "ws://";
+
+        const wsUrl = protocol + globalThis.location.host + "/ws/media-info";
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = async (event) => {
+          const data = JSON.parse(event.data);
+
+          if (data.status === "inactive") {
+            defaultStatePanel(title_element, artist_element, play_btn);
+            return;
+          }
+
+          if (data.is_playing) {
+            play_btn.innerHTML = PAUSE_LOGO;
+            enableBorderShadowThumbnail(thumbnail_element);
+          } else {
+            play_btn.innerHTML = PLAY_LOGO;
+            disableBorderShadowThumbnail(thumbnail_element);
+          }
+
+          if (data.title !== currentTitle) {
+            currentTitle = data.title;
+            title_element.innerText = data.title || "Unknown";
+            artist_element.innerText = data.artist || "Unknown";
+          }
+        };
+
+        ws.onclose = () => {
+          defaultStatePanel(title_element, artist_element, play_btn);
+          console.log("Lost connection. Restarting in 3s...");
+          setTimeout(connectMediaInfoWebSocket, 3000);
+        };
+
+        ws.onerror = (e) => {
+          console.error("Media Info WebSocket Error:", e);
+          ws.close();
+        };
+      }
+
+      async function connectThumbWebSocket() {
+        const protocol =
+          globalThis.location.protocol === "https:" ? "wss://" : "ws://";
+
+        const wsUrl = protocol + globalThis.location.host + "/ws/thumbnail";
+
+        wsThumb = new WebSocket(wsUrl);
+
+        wsThumb.onmessage = (event) => {
+          const payload = JSON.parse(event.data);
+          const thumbnail_element = document.getElementById("thumbnail");
+          console.log("Update thumbnail");
+
+          if (payload.data) {
+            thumbnail_element.src = payload.data;
+          } else {
+            thumbnail_element.src = DEFAULT_THUMB_SRC;
+          }
+          setBorderShadowThumbnail(thumbnail_element);
+        };
+
+        wsThumb.onclose = () => {
+          console.log("Lost thumbnail connection. Restarting in 3s");
+          setTimeout(connectThumbWebSocket, 3000);
+        };
+
+        wsThumb.onerror = (e) => {
+          console.error("Thumbnail WebSocket Error:", e);
+          wsThumb.close();
+        };
+      }
+
+      function connectSockets() {
+        connectMediaInfoWebSocket();
+        connectThumbWebSocket();
+      }
+
+      window.onload = connectSockets;
+    </script>
+  </head>
+  <body>
+    <div class="main">
+      <div id="media-info">
+        <div class="thumb-container">
+          <img src="__DEFAULT_THUMB__" alt="thumbnail" id="thumbnail" />
+        </div>
+
+        <p class="title"><strong id="title-text"></strong></p>
+        <p class="artist"><strong id="artist-text"></strong></p>
+      </div>
+
+      <div class="button-container">
+        <button onclick="sendCmd('prev')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
+          </svg>
+        </button>
+
+        <button onclick="sendCmd('play')" id="play-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3,5V19L11,12M13,19H16V5H13M18,5V19H21V5" />
+          </svg>
+        </button>
+
+        <button onclick="sendCmd('next')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="button-container">
+        <button onclick="sendCmd('vol-down')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3,9H7L12,4V20L7,15H3V9M14,11H22V13H14V11Z" />
+          </svg>
+        </button>
+
+        <button onclick="sendCmd('mute')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M3,9H7L12,4V20L7,15H3V9M16.59,12L14,9.41L15.41,8L18,10.59L20.59,8L22,9.41L19.41,12L22,14.59L20.59,16L18,13.41L15.41,16L14,14.59L16.59,12Z"
+            />
+          </svg>
+        </button>
+
+        <button onclick="sendCmd('vol-up')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M3,9H7L12,4V20L7,15H3V9M14,11H17V8H19V11H22V13H19V16H17V13H14V11Z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

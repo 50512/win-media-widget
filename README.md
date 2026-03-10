@@ -22,6 +22,8 @@ Sea cual sea el método usado, debes crear la variable de entorno de usuario `ME
 
 Otra variable a usar (pero opcional) es `SELF_API_IP`, para solo aceptar conexiones a través de la interfaz especifica, de no encontrarse, se usara la interfaz `0.0.0.0`.
 
+También esta esta variable, que es netamente de desarrollo, `DEBUG`. Esta variable permite habilitar el "hot reload" de los paneles `HTML`.
+
 ## Media panel
 
 Una de las características principales es la presencia de un panel web, que sirve para visualizar el estado de la reproducción y controlarlo.

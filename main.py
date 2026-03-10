@@ -11,6 +11,7 @@ from typing import Annotated
 
 import pyautogui
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import (
     FastAPI,
     Header,
@@ -29,16 +30,29 @@ from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
 
+load_dotenv()
+
 DEFAULT_THUMB = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAAAGz+OhAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAB4eHp2RNQkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTGKCBbOAAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAADAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAKOTAADoAwAAo5MAAOgDAABQYWludC5ORVQgNS4xLjExAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADY5TB4zfSjcAAAAX1JREFUSMft0jFqwzAUBmApGTx67RCibrlCAiK6SqBD14QsDoTYW5eCL1Csq3go9VLwFdy61KuNFwmEXqXIdgPdurQQe/iHD8nvSU8IfnwKjTbaaFdsGQCxMVhRrzGoyQmn21uMmLMtRaFAR7SxRs4mjkKxRgRqpaTMYme00axUO70Sg0naACn1Dm6khN5mLZAKWphd2GMJJIMSZjvhpa6GfO1tb8z1Ip9bay3M9xJeQmcf9n96D/OFsW5d0cC5F7YwvXRWC83e1FYzzxjpLQhrG74x7s4bmBTYRFxg/NAZYNCeCWvZX8/t16am0zSliBVzVJy6WV7Ypjfws7IGGorwKQDu7gUWVfUe0rBhybI3fV9Wn8Zalgzr9F2ZObN7u7r7Ns8YDUseCYjc3FTb5LmxikfBYFjGKaGHwk+WbbdXYMkjY6nPB5NSEM7pIc+tubrSPEkeG8u+rVGKkZwe4ioZLK0p9RFCXoQ2k+68ab0+dlb09p/mNtpoo12hfQFpNWBnv30yXQAAAABJRU5ErkJggg=="
+
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() in ("true", "1")
 
 ERROR_RESPONSES = {
     401: {"description": "Token inválido o ausente"},
     404: {"description": "Acción multimedia no reconocida"},
 }
 
-BASE_DIR = Path(__file__).resolve().parent
-with open(BASE_DIR / "panel.html", "r", encoding="utf-8") as f:
-    TEMPLATE_HTML = f.read()
+TEMPLATE_HTML = (
+    Path("./panels/setInterval.html")
+    .read_text(encoding="utf-8")
+    .replace("__TOKEN_HERE__", SECRET_TOKEN)
+    .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
+)
+TEMPLATE_HTML_WS = (
+    Path("./panels/webSocket.html")
+    .read_text(encoding="utf-8")
+    .replace("__TOKEN_HERE__", SECRET_TOKEN)
+    .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
+)
 
 app = FastAPI()
 
@@ -143,9 +157,26 @@ async def get_current_media_info():
 
 @app.get("/panel", response_class=HTMLResponse)
 async def control_panel():
-    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN).replace(
-        "__DEFAULT_THUMB__", DEFAULT_THUMB
-    )
+    if DEBUG_MODE:
+        return (
+            Path("./panels/setInterval.html")
+            .read_text(encoding="utf-8")
+            .replace("__TOKEN_HERE__", SECRET_TOKEN)
+            .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
+        )
+    return TEMPLATE_HTML
+
+
+@app.get("/panel-ws", response_class=HTMLResponse)
+async def control_panel():
+    if DEBUG_MODE:
+        return (
+            Path("./panels/webSocket.html")
+            .read_text(encoding="utf-8")
+            .replace("__TOKEN_HERE__", SECRET_TOKEN)
+            .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
+        )
+    return TEMPLATE_HTML_WS
 
 
 @app.websocket("/ws/media-info")
