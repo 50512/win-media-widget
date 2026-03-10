@@ -127,7 +127,11 @@
 
     <script>
       let currentTitle = "";
-      let found_thumbnail = false;
+
+      let ws;
+      let wsThumb;
+
+      const DEFAULT_THUMB_SRC = "__DEFAULT_THUMB__";
 
       const globalCanvas = document.createElement("canvas");
       const globalCanvasContext = globalCanvas.getContext("2d", {
@@ -236,45 +240,95 @@
         if (container) container.classList.remove("no-shadow");
       }
 
-      async function getMediaInfo() {
-        const res = await fetch("/media/info");
-        const data = await res.json();
+      async function defaultStatePanel(
+        title_element,
+        artist_element,
+        play_btn,
+      ) {
+        title_element.innerText = "No session yet";
+        artist_element.innerText = "-";
+        play_btn.innerHTML = PLAY_PAUSE_LOGO;
+        currentTitle = "";
+      }
 
+      async function connectMediaInfoWebSocket() {
         const title_element = document.getElementById("title-text");
         const artist_element = document.getElementById("artist-text");
         const thumbnail_element = document.getElementById("thumbnail");
         const play_btn = document.getElementById("play-btn");
 
-        if (data.status === "inactive") {
-          title_element.innerText = "No session yet";
-          artist_element.innerText = "-";
-          found_thumbnail = await setThumbnailSrc(thumbnail_element);
-          play_btn.innerHTML = PLAY_PAUSE_LOGO;
-          currentTitle = "";
-          return;
-        }
+        const protocol =
+          globalThis.location.protocol === "https:" ? "wss://" : "ws://";
 
-        if (!found_thumbnail) {
-          found_thumbnail = await setThumbnailSrc(thumbnail_element);
-        }
+        const wsUrl = protocol + globalThis.location.host + "/ws/media-info";
 
-        if (data.is_playing) {
-          play_btn.innerHTML = PAUSE_LOGO;
-          enableBorderShadowThumbnail(thumbnail_element);
-        } else {
-          play_btn.innerHTML = PLAY_LOGO;
-          disableBorderShadowThumbnail(thumbnail_element);
-        }
+        ws = new WebSocket(wsUrl);
 
-        if (data.title !== currentTitle) {
-          currentTitle = data.title;
-          title_element.innerText = data.title || "Unknown";
-          artist_element.innerText = data.artist || "Unknown";
+        ws.onmessage = async (event) => {
+          const data = JSON.parse(event.data);
 
-          found_thumbnail = true;
+          if (data.status === "inactive") {
+            defaultStatePanel(title_element, artist_element, play_btn);
+            return;
+          }
 
-          setTimeout(async () => (found_thumbnail = false), 2000);
-        }
+          if (data.is_playing) {
+            play_btn.innerHTML = PAUSE_LOGO;
+            enableBorderShadowThumbnail(thumbnail_element);
+          } else {
+            play_btn.innerHTML = PLAY_LOGO;
+            disableBorderShadowThumbnail(thumbnail_element);
+          }
+
+          if (data.title !== currentTitle) {
+            currentTitle = data.title;
+            title_element.innerText = data.title || "Unknown";
+            artist_element.innerText = data.artist || "Unknown";
+          }
+        };
+
+        ws.onclose = () => {
+          defaultStatePanel(title_element, artist_element, play_btn);
+          console.log("Lost connection. Restarting in 3s...");
+          setTimeout(connectMediaInfoWebSocket, 3000);
+        };
+
+        ws.onerror = (e) => {
+          console.error("Media Info WebSocket Error:", e);
+          ws.close();
+        };
+      }
+
+      async function connectThumbWebSocket() {
+        const protocol =
+          globalThis.location.protocol === "https:" ? "wss://" : "ws://";
+
+        const wsUrl = protocol + globalThis.location.host + "/ws/thumbnail";
+
+        wsThumb = new WebSocket(wsUrl);
+
+        wsThumb.onmessage = (event) => {
+          const payload = JSON.parse(event.data);
+          const thumbnail_element = document.getElementById("thumbnail");
+          console.log("Update thumbnail");
+
+          if (payload.data) {
+            thumbnail_element.src = payload.data;
+          } else {
+            thumbnail_element.src = DEFAULT_THUMB_SRC;
+          }
+          setBorderShadowThumbnail(thumbnail_element);
+        };
+
+        wsThumb.onclose = () => {
+          console.log("Lost thumbnail connection. Restarting in 3s");
+          setTimeout(connectThumbWebSocket, 3000);
+        };
+
+        wsThumb.onerror = (e) => {
+          console.error("Thumbnail WebSocket Error:", e);
+          wsThumb.close();
+        };
       }
 
       async function setThumbnailSrc(thumbnail_element) {
@@ -284,12 +338,12 @@
         try {
           const res = await fetch(thumb_src);
           if (!res.ok) {
-            thumb_src = "__DEFAULT_THUMB__";
+            thumb_src = DEFAULT_THUMB_SRC;
             throw new Error("Error fetch thumbnail");
           }
           success = true;
         } catch (e) {
-          thumb_src = "__DEFAULT_THUMB__";
+          thumb_src = DEFAULT_THUMB_SRC;
           console.error("Error: ", e);
           success = false;
         }
@@ -299,16 +353,12 @@
         return success;
       }
 
-      async function loopGetMediaInfo() {
-        try {
-          await getMediaInfo();
-        } catch (e) {
-          console.error("ERROR: ", e);
-        }
-        setTimeout(loopGetMediaInfo, 1500);
+      function connectSockets() {
+        connectMediaInfoWebSocket();
+        connectThumbWebSocket();
       }
 
-      window.onload = loopGetMediaInfo;
+      window.onload = connectSockets;
     </script>
   </head>
   <body>

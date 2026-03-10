@@ -4,3 +4,4 @@ uvicorn==0.41.0
 winrt-Windows.Media.Control==3.2.1
 winrt-Windows.Storage.Streams==3.2.1
 winrt-Windows.foundation==3.2.1
+websockets==16.0

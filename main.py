@@ -1,3 +1,7 @@
+import argparse
+import asyncio
+import base64
+import hashlib
 import logging
 import os
 import sys
@@ -7,15 +11,20 @@ from typing import Annotated
 
 import pyautogui
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import (
+    FastAPI,
+    Header,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.responses import HTMLResponse, Response
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
 )
 from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
-
-import argparse
 
 SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
 IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
@@ -74,18 +83,7 @@ def verify_token(token: str):
         )
 
 
-@app.get("/panel", response_class=HTMLResponse)
-async def control_panel():
-    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN).replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
-
-
-@app.get("/health")
-async def health():
-    return {"status": "OK"}
-
-
-@app.get("/media/info")
-async def get_current_media_info():
+async def fetch_media_state():
     manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
     session = manager.get_current_session()
 
@@ -109,32 +107,110 @@ async def get_current_media_info():
     }
 
 
-@app.get("/media/thumbnail")
-async def get_media_thumbnail():
+async def get_thumbnail_base64():
     manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
     session = manager.get_current_session()
 
     if not session:
-        return Response(status_code=404)
+        return None
 
     media_props = await session.try_get_media_properties_async()
     thumbnail_ref = media_props.thumbnail
 
     if not thumbnail_ref:
-        return Response(status_code=404)
+        return None
 
     stream = await thumbnail_ref.open_read_async()
-
     buffer = Buffer(stream.size)
-
     await stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
 
     reader = DataReader.from_buffer(buffer)
     byte_array = bytearray(buffer.length)
-
     reader.read_bytes(byte_array)
 
-    return Response(content=bytes(byte_array), media_type="image/jpeg")
+    return base64.b64encode(byte_array).decode("utf-8")
+
+
+@app.get("/health")
+async def health():
+    return {"status": "OK"}
+
+
+@app.get("/media/info")
+async def get_current_media_info():
+    return await fetch_media_state()
+
+
+@app.get("/panel", response_class=HTMLResponse)
+async def control_panel():
+    return TEMPLATE_HTML.replace("__TOKEN_HERE__", SECRET_TOKEN).replace(
+        "__DEFAULT_THUMB__", DEFAULT_THUMB
+    )
+
+
+@app.websocket("/ws/media-info")
+async def websocket_media(websocket: WebSocket):
+    await websocket.accept()
+    last_state = None
+
+    try:
+        while True:
+            current_state = await fetch_media_state()
+
+            if current_state != last_state:
+                await websocket.send_json(current_state)
+                last_state = current_state
+
+            await asyncio.sleep(1)
+
+    except WebSocketDisconnect:
+        pass
+
+
+@app.websocket("/ws/thumbnail")
+async def websocket_thumbnail(websocket: WebSocket):
+    await websocket.accept()
+
+    last_hash = None
+
+    try:
+        while True:
+            b64_data = await get_thumbnail_base64()
+
+            if b64_data:
+
+                current_hash = hashlib.md5(b64_data.encode()).hexdigest()
+
+                if current_hash != last_hash:
+                    await websocket.send_json(
+                        {
+                            "type": "thumbnail",
+                            "data": f"data:image/jpeg;base64,{b64_data}",
+                        }
+                    )
+                    last_hash = current_hash
+
+            else:
+                if last_hash is not None:
+                    await websocket.send_json({"type": "thumbnail", "data": None})
+                    last_hash = None
+
+            await asyncio.sleep(1)
+
+    except WebSocketDisconnect:
+        pass
+
+
+@app.get("/media/thumbnail")
+async def get_media_thumbnail():
+    b64_data = await get_thumbnail_base64()
+
+    if not b64_data:
+        return Response(status_code=404)
+
+    image_bytes = base64.b64decode(b64_data)
+
+    return Response(content=image_bytes, media_type="image/jpeg")
 
 
 @app.get("/media/{action}", responses=ERROR_RESPONSES)
@@ -162,17 +238,22 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="Windows Media Widget", description="Expose a web panel to view and control the media session of windows")
-    parser.add_argument("-p", "--port", type=int, help="Port to expose the service (default: 25012)")
-    
+    parser = argparse.ArgumentParser(
+        prog="Windows Media Widget",
+        description="Expose a web panel to view and control the media session of windows",
+    )
+    parser.add_argument(
+        "-p", "--port", type=int, help="Port to expose the service (default: 25012)"
+    )
+
     args = parser.parse_args()
-    
+
     if not SECRET_TOKEN:
         raise EnvironmentError("Token no existente")
 
     if sys.executable.endswith("pythonw.exe"):
         set_logger()
-    
+
     if not args.port:
         port = 25012
     else:
