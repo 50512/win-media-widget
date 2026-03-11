@@ -4,6 +4,10 @@
     <title>Media Control Panel</title>
     <meta charset="UTF-8" />
     <style>
+      :root {
+        /* Color variables*/
+      }
+
       body {
         display: flex;
         flex-direction: column;
@@ -15,7 +19,9 @@
 
       input,
       button {
+        border: none;
         outline: none;
+        text-decoration: none;
       }
 
       .main {
@@ -142,7 +148,7 @@
         h2 {
           width: 100%;
           margin-top: 0px;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.8rem;
           padding-bottom: 0.3rem;
           text-wrap: wrap;
 
@@ -156,42 +162,64 @@
         .modal-button-container {
           display: flex;
           justify-content: flex-end;
-        }
 
-        button {
-          padding: 0.5rem;
-          border-radius: 5px;
-          border: none;
-          outline: none;
+          button {
+            padding: 0.5rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 1rem;
 
-          text-decoration: none;
-          font-size: 1rem;
+            background-color: #4f4f4f;
+            transition:
+              filter 0.5s,
+              box-shadow 0.5s;
 
-          background-color: #4f4f4f;
-          transition:
-            filter 0.5s,
-            box-shadow 0.5s;
+            box-shadow: 0px 0px 5px #40d2ff;
+            color: #ffffff;
 
-          box-shadow: 0px 0px 5px #40d2ff;
-          color: #ffffff;
-
-          &:hover {
-            cursor: pointer;
-            filter: brightness(0.8);
-            box-shadow: none;
+            &:hover {
+              cursor: pointer;
+              filter: brightness(0.8);
+              box-shadow: none;
+            }
           }
         }
 
-        input {
+        .token-box {
+          padding: 0px;
+          padding-bottom: 0.7rem;
           width: 100%;
-          background: none;
-          border: none;
-          border-bottom: 0.5px solid #40d2ff;
-          color: #e6e6e6;
-          margin: 0.6rem 0rem;
+          display: flex;
+          flex-direction: row;
 
-          &::placeholder {
+          svg {
+            --size: 1.25rem;
+            width: var(--size);
+            height: var(--size);
+            fill: #e6e6e6;
+          }
+
+          button {
+            background: none;
+            transition: scale 250ms;
+
+            &:hover {
+              cursor: pointer;
+              scale: 1.1;
+            }
+          }
+
+          input {
+            width: 100%;
+            background: none;
+            border: none;
+            border-bottom: 0.5px solid #40d2ff;
             color: #e6e6e6;
+            margin: 0px;
+
+            &::placeholder {
+              color: #e6e6e6;
+            }
           }
         }
       }
@@ -227,10 +255,25 @@
       const PAUSE_LOGO =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>';
 
+      const EYE_OPEN =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C17,4.5 21.27,7.61 23,12C21.27,16.39 17,19.5 12,19.5C7,19.5 2.73,16.39 1,12C2.73,7.61 7,4.5 12,4.5M3.18,12C4.83,15.36 8.24,17.5 12,17.5C15.76,17.5 19.17,15.36 20.82,12C19.17,8.64 15.76,6.5 12,6.5C8.24,6.5 4.83,8.64 3.18,12Z" /></svg>';
+
+      const EYE_CLOSE =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.5C8.2 17.5 4.8 15.4 3.2 12H1C2.7 16.4 7 19.5 12 19.5S21.3 16.4 23 12H20.8C19.2 15.4 15.8 17.5 12 17.5Z" /></svg>';
+
       function sendCmd(action) {
         const token = localStorage.getItem(MEDIA_TOKEN_NAME);
         const tokenModal = document.getElementById("token-modal");
         const titleModalElement = document.querySelector("#token-modal>h2");
+
+        tokenModal.onclose = () => {
+          const tokenForm = document.getElementById("token-form");
+
+          if (document.getElementById("token-input").type === "text") {
+            changePassView();
+          }
+          tokenForm.reset();
+        };
 
         if (!token) {
           titleModalElement.innerText = MODAL_MESSAGES.default;
@@ -240,7 +283,6 @@
 
         fetch("/media/" + action, {
           method: "GET",
-          // Marcador del token (reemplazado en Python)
           headers: { "X-Token": token },
         })
           .then((res) => {
@@ -254,7 +296,6 @@
       }
 
       function saveToken() {
-        const tokenForm = document.getElementById("token-form");
         const tokenInput = document.getElementById("token-input");
 
         const newToken = tokenInput.value.trim();
@@ -262,8 +303,18 @@
         if (newToken) {
           localStorage.setItem(MEDIA_TOKEN_NAME, newToken);
         }
+      }
 
-        tokenForm.reset();
+      function changePassView() {
+        const tokenInput = document.getElementById("token-input");
+        const eyeButton = document.getElementById("view-changer");
+        if (tokenInput.type === "password") {
+          tokenInput.type = "text";
+          eyeButton.innerHTML = EYE_CLOSE;
+        } else if (tokenInput.type === "text") {
+          tokenInput.type = "password";
+          eyeButton.innerHTML = EYE_OPEN;
+        }
       }
 
       function setBorderShadowThumbnail(thumbElement) {
@@ -481,12 +532,21 @@
       <dialog id="token-modal">
         <h2>Please, enter the API TOKEN</h2>
         <form method="dialog" id="token-form" onsubmit="saveToken()">
-          <input
-            type="text"
-            placeholder="Your Media API Token"
-            id="token-input"
-            required
-          />
+          <div class="token-box">
+            <input
+              type="password"
+              placeholder="Your Media API Token"
+              id="token-input"
+              required
+            />
+            <button type="button" id="view-changer" onclick="changePassView()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C17,4.5 21.27,7.61 23,12C21.27,16.39 17,19.5 12,19.5C7,19.5 2.73,16.39 1,12C2.73,7.61 7,4.5 12,4.5M3.18,12C4.83,15.36 8.24,17.5 12,17.5C15.76,17.5 19.17,15.36 20.82,12C19.17,8.64 15.76,6.5 12,6.5C8.24,6.5 4.83,8.64 3.18,12Z"
+                />
+              </svg>
+            </button>
+          </div>
           <div class="modal-button-container">
             <button type="submit">Save Token</button>
           </div>
