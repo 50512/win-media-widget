@@ -1,5 +1,7 @@
 # Widget Multimedia para Windows
 
+### Importante: Este proyecto esta basado en `Python 3.10`
+
 ## Variables de entorno
 
 Este proyecto depende de la variable de entorno `MEDIA_API_TOKEN` que se usará para restringir el acceso a clientes autorizados por este token.
@@ -165,7 +167,7 @@ Recomendamos que el contenido de este repositorio este en `C:\Scripts\MediaAPI\`
 
 ### Preparación del entorno
 
-Por comodidad y aislamiento del servicio, usaremos un entorno virtual de `Python 3.14.0`.
+Por comodidad y aislamiento del servicio, usaremos un entorno virtual de `Python 3.10`.
 
 ```bash
 python -m venv .venv

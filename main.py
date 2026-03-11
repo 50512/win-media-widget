@@ -159,7 +159,6 @@ async def control_panel():
         return (
             Path("./panels/polling.html")
             .read_text(encoding="utf-8")
-    
             .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
         )
     return TEMPLATE_HTML
@@ -171,7 +170,6 @@ async def control_panel():
         return (
             Path("./panels/webSocket.html")
             .read_text(encoding="utf-8")
-    
             .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
         )
     return TEMPLATE_HTML_WS
@@ -255,6 +253,7 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
         "mute": "volumemute",
         "next": "nexttrack",
         "prev": "prevtrack",
+        "stop": "stop",
     }
 
     if action in actions:
@@ -269,7 +268,7 @@ async def control_media(action: str, x_token: Annotated[str | None, Header()]):
 if __name__ == "__main__":
     if sys.executable.endswith("pythonw.exe"):
         set_logger()
-    
+
     parser = argparse.ArgumentParser(
         prog="Windows Media Widget",
         description="Expose a web panel to view and control the media session of windows",
@@ -279,10 +278,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-        
+
     if not SECRET_TOKEN:
         raise EnvironmentError("Token no existente")
-
 
     if not args.port:
         port = 25012

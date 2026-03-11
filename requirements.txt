@@ -1,3 +1,4 @@
+# Python 3.10
 fastapi==0.135.1
 PyAutoGUI==0.9.54
 uvicorn==0.41.0
@@ -6,3 +7,4 @@ winrt-Windows.Storage.Streams==3.2.1
 winrt-Windows.foundation==3.2.1
 websockets==16.0
 python-dotenv==1.2.2
+pywebview===6.1
