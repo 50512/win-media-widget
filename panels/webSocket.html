@@ -483,6 +483,7 @@
 
         wsThumb.onclose = () => {
           console.log("Lost thumbnail connection. Restarting in 3s");
+          document.getElementById("thumbnail").src = DEFAULT_THUMB_SRC;
           setTimeout(connectThumbWebSocket, 3000);
         };
 

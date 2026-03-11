@@ -399,6 +399,19 @@
         if (container) container.classList.remove("no-shadow");
       }
 
+      async function defaultStatePanel(
+        title_element,
+        artist_element,
+        thumbnail_element,
+        play_btn,
+      ) {
+        title_element.innerText = "No session yet";
+        artist_element.innerText = "-";
+        found_thumbnail = await setThumbnailSrc(thumbnail_element);
+        play_btn.innerHTML = PLAY_PAUSE_LOGO;
+        currentTitle = "";
+      }
+
       async function getMediaInfo() {
         const res = await fetch("/media/info");
         const data = await res.json();
@@ -409,11 +422,12 @@
         const play_btn = document.getElementById("play-btn");
 
         if (data.status === "inactive") {
-          title_element.innerText = "No session yet";
-          artist_element.innerText = "-";
-          found_thumbnail = await setThumbnailSrc(thumbnail_element);
-          play_btn.innerHTML = PLAY_PAUSE_LOGO;
-          currentTitle = "";
+          defaultStatePanel(
+            title_element,
+            artist_element,
+            thumbnail_element,
+            play_btn,
+          );
           return;
         }
 
@@ -467,6 +481,17 @@
           await getMediaInfo();
         } catch (e) {
           console.error("ERROR: ", e);
+          const title_element = document.getElementById("title-text");
+          const artist_element = document.getElementById("artist-text");
+          const thumbnail_element = document.getElementById("thumbnail");
+          const play_btn = document.getElementById("play-btn");
+
+          defaultStatePanel(
+            title_element,
+            artist_element,
+            thumbnail_element,
+            play_btn,
+          );
         }
         setTimeout(loopGetMediaInfo, 1500);
       }
