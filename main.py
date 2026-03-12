@@ -27,14 +27,13 @@ from winrt.windows.media.control import (
 )
 from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
 
-SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
-IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
-
 load_dotenv()
 
-DEFAULT_THUMB = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAAAGz+OhAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAB4eHp2RNQkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTGKCBbOAAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAADAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAKOTAADoAwAAo5MAAOgDAABQYWludC5ORVQgNS4xLjExAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADY5TB4zfSjcAAAAX1JREFUSMft0jFqwzAUBmApGTx67RCibrlCAiK6SqBD14QsDoTYW5eCL1Csq3go9VLwFdy61KuNFwmEXqXIdgPdurQQe/iHD8nvSU8IfnwKjTbaaFdsGQCxMVhRrzGoyQmn21uMmLMtRaFAR7SxRs4mjkKxRgRqpaTMYme00axUO70Sg0naACn1Dm6khN5mLZAKWphd2GMJJIMSZjvhpa6GfO1tb8z1Ip9bay3M9xJeQmcf9n96D/OFsW5d0cC5F7YwvXRWC83e1FYzzxjpLQhrG74x7s4bmBTYRFxg/NAZYNCeCWvZX8/t16am0zSliBVzVJy6WV7Ypjfws7IGGorwKQDu7gUWVfUe0rBhybI3fV9Wn8Zalgzr9F2ZObN7u7r7Ns8YDUseCYjc3FTb5LmxikfBYFjGKaGHwk+WbbdXYMkjY6nPB5NSEM7pIc+tubrSPEkeG8u+rVGKkZwe4ioZLK0p9RFCXoQ2k+68ab0+dlb09p/mNtpoo12hfQFpNWBnv30yXQAAAABJRU5ErkJggg=="
-
+SECRET_TOKEN = os.getenv("MEDIA_API_TOKEN")
+IP_API = os.getenv("SELF_API_IP", "0.0.0.0")
 DEBUG_MODE = os.getenv("DEBUG", "false").lower() in ("true", "1")
+
+DEFAULT_THUMB = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAAAGz+OhAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURQAAAB4eHp2RNQkAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTGKCBbOAAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAADAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAKOTAADoAwAAo5MAAOgDAABQYWludC5ORVQgNS4xLjExAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADY5TB4zfSjcAAAAX1JREFUSMft0jFqwzAUBmApGTx67RCibrlCAiK6SqBD14QsDoTYW5eCL1Csq3go9VLwFdy61KuNFwmEXqXIdgPdurQQe/iHD8nvSU8IfnwKjTbaaFdsGQCxMVhRrzGoyQmn21uMmLMtRaFAR7SxRs4mjkKxRgRqpaTMYme00axUO70Sg0naACn1Dm6khN5mLZAKWphd2GMJJIMSZjvhpa6GfO1tb8z1Ip9bay3M9xJeQmcf9n96D/OFsW5d0cC5F7YwvXRWC83e1FYzzxjpLQhrG74x7s4bmBTYRFxg/NAZYNCeCWvZX8/t16am0zSliBVzVJy6WV7Ypjfws7IGGorwKQDu7gUWVfUe0rBhybI3fV9Wn8Zalgzr9F2ZObN7u7r7Ns8YDUseCYjc3FTb5LmxikfBYFjGKaGHwk+WbbdXYMkjY6nPB5NSEM7pIc+tubrSPEkeG8u+rVGKkZwe4ioZLK0p9RFCXoQ2k+68ab0+dlb09p/mNtpoo12hfQFpNWBnv30yXQAAAABJRU5ErkJggg=="
 
 ERROR_RESPONSES = {
     401: {"description": "Token inválido o ausente"},
@@ -100,7 +99,11 @@ def verify_token(token: str):
 async def get_media_manager():
     global _media_manager
     if _media_manager is None:
-        _media_manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+        _media_manager = (
+            await GlobalSystemMediaTransportControlsSessionManager.request_async()
+        )
+        if DEBUG_MODE:
+            print("get new Media Manager")
     return _media_manager
 
 
@@ -152,11 +155,12 @@ async def get_thumbnail_base64():
 
         return base64.b64encode(byte_array).decode("utf-8")
     finally:
-        if 'reader' in locals():
+        if "reader" in locals():
             reader.close()
-            
-        if 'stream' in locals():
+
+        if "stream" in locals():
             stream.close()
+
 
 @app.get("/health")
 async def health():
