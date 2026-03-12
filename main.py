@@ -52,6 +52,8 @@ TEMPLATE_HTML_WS = (
     .replace("__DEFAULT_THUMB__", DEFAULT_THUMB)
 )
 
+_media_manager = None
+
 app = FastAPI()
 
 
@@ -95,8 +97,15 @@ def verify_token(token: str):
         )
 
 
+async def get_media_manager():
+    global _media_manager
+    if _media_manager is None:
+        _media_manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+    return _media_manager
+
+
 async def fetch_media_state():
-    manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+    manager = await get_media_manager()
     session = manager.get_current_session()
 
     if not session:
@@ -120,7 +129,7 @@ async def fetch_media_state():
 
 
 async def get_thumbnail_base64():
-    manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
+    manager = await get_media_manager()
     session = manager.get_current_session()
 
     if not session:
@@ -132,16 +141,22 @@ async def get_thumbnail_base64():
     if not thumbnail_ref:
         return None
 
-    stream = await thumbnail_ref.open_read_async()
-    buffer = Buffer(stream.size)
-    await stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
+    try:
+        stream = await thumbnail_ref.open_read_async()
+        buffer = Buffer(stream.size)
+        await stream.read_async(buffer, buffer.capacity, InputStreamOptions.NONE)
 
-    reader = DataReader.from_buffer(buffer)
-    byte_array = bytearray(buffer.length)
-    reader.read_bytes(byte_array)
+        reader = DataReader.from_buffer(buffer)
+        byte_array = bytearray(buffer.length)
+        reader.read_bytes(byte_array)
 
-    return base64.b64encode(byte_array).decode("utf-8")
-
+        return base64.b64encode(byte_array).decode("utf-8")
+    finally:
+        if 'reader' in locals():
+            reader.close()
+            
+        if 'stream' in locals():
+            stream.close()
 
 @app.get("/health")
 async def health():
@@ -270,8 +285,8 @@ if __name__ == "__main__":
         set_logger()
 
     parser = argparse.ArgumentParser(
-        prog="Windows Media Widget",
-        description="Expose a web panel to view and control the media session of windows",
+        prog="Win Media Widget Server",
+        description="Expose an API and a web panel to view and control the media session of Windows",
     )
     parser.add_argument(
         "-p", "--port", type=int, help="Port to expose the service (default: 25012)"
