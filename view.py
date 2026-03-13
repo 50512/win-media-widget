@@ -26,13 +26,6 @@ def get_host_by_bind():
         return BIND_IP
 
 
-def inject_token(window):
-    time.sleep(1)
-    if SECRET_TOKEN:
-        js_code = f"localStorage.setItem('MEDIA_API_TOKEN', '{SECRET_TOKEN}')"
-        window.evaluate_js(js_code)
-
-
 def start_view(
     url: str,
     resizable: bool = True,
@@ -53,7 +46,14 @@ def start_view(
         transparent=False,
     )
 
-    webview.start(inject_token, window)
+    def inject_token(window):
+        if SECRET_TOKEN:
+            js_code = f"localStorage.setItem('MEDIA_API_TOKEN', '{SECRET_TOKEN}')"
+            window.evaluate_js(js_code)
+
+    window.events.loaded += inject_token
+
+    webview.start()
 
 
 if __name__ == "__main__":
