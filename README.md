@@ -116,6 +116,7 @@ Mapeo de los EndPoints hacia su tecla correspondiente en Windows. Este EndPoint 
 | `mute`     | `volumemute`  |
 | `next`     | `nexttrack`   |
 | `prev`     | `prevtrack`   |
+| `stop`     | `stop`        |
 
 ## WebSocket EndPoints
 
@@ -137,11 +138,21 @@ El mensaje solo sera enviado cuando la imagen actual sea diferente a la ultima e
 
 ## Aspectos Técnicos
 
-1. Optimización en el WebSocket de la caratula
+1. Optimización de memoria y conexiones con WinRT
+
+   En una reciente actualización arreglamos un leak de memoria y se optimizo la comunicación con la API del sistema de Windows (`System Media Transport Control Session Manager`).
+
+   Anteriormente se ejecutaba el método `request_async()` en cada iteración de los WebSockets (aproximadamente 2 veces por segundo). Se observó que, tras varias horas de ejecución, este comportamiento satura los canales de comunicación con Windows y su proceso principal (`explorer.exe`). Para solucionarlo, ahora se instancia un _manager_ global, que reutilizara la conexión existente en cada bucle, evitando saturar los canales con conexiones nuevas.
+
+   Por otro lado, el leak a ocurrido en la función `get_thumbnail_base64()`. Dicha función abre un _stream_ directo a la memoria no administrada de Windows para leer la caratula multimedia. El problema radica en no cerrar los objetos `stream` y `DataReader`, dejando referencias en memoria activas, acumulando las caratulas en cada bucle del WebSocket. Al retener esos recursos, se producía un bloqueo en `explorer.exe` (proceso principal del sistema), que persistía incluso cerrando el script.
+
+   La solución fue implementar una liberación estricta (con `try...finally`) que ejecuta `.close()` al final de cada bucle. El código verifica primero que se haya creado la instancia, para cerrarla correctamente (liberando la RAM y los canales de comunicación con `explorer.exe`)
+
+2. Optimización en el WebSocket de la caratula
 
    Para evitar saturar el ancho de banda, enviando innecesariamente la caratula repetida, guardamos el hash `md5` de la ultima imagen enviada, y en cada ciclo, comparamos dicho hash con el hash de la imagen actual en memoria. De esta manera podemos comparar ambas imágenes de manera indirecta (en vez de comparar ambas cadenas en `Base64`, lo cual consumiría muchos recursos) y, ademas, evitamos enviar la misma caratula varias veces por el WebSocket.
 
-2. Polling vs WebSocket
+3. Polling vs WebSocket
 
    Hay 2 tipos de paneles disponibles, el panel por [Polling](#panel) y el panel por [WebSocket](#wspanel). Aca detallamos sus diferencias técnicas:
 
@@ -154,7 +165,7 @@ El mensaje solo sera enviado cuando la imagen actual sea diferente a la ultima e
 
    Principalmente por ese ultimo punto estamos manteniendo el método de Polling, ya que si se desea incrustar el widget con WebSocket en una pagina con HTTPS, el navegador rechazara la conexión insegura HTTP, a no ser que se le otorgue un dominio con certificado SSL valido para el widget.
 
-3. Limitaciones técnicas conocidas
+4. Limitaciones técnicas conocidas
    1. Por la arquitectura de Windows, solo puede existir una sesión multimedia, por lo que el widget siempre mostrara la ultima sesión activa registrada por Windows.
    2. Los navegadores suelen tener comportamientos erráticos con la sesión multimedia de Windows, lo que podría ocasionar que no se vea la caratula correcta, no se obtenga los datos de título y/o artista, o perder directamente la sesión. Para evitar problemas con la perdida de la sesión, los botones multimedia **siempre están disponibles**.
    3. Una situación especifica con el reproductor AIMP. Este reproductor, por defecto, **no tiene integración con Windows**, por lo que se requiere instalar el plugin [Windows 10 Media Control](https://aimp.ru/?do=catalog&rec_id=1097). Sin el plugin, AIMP no podrá enviar la información multimedia a Windows, pero los botones multimedia siguen siendo 100% funcionales (otra de las razones por las que están siempre habilitados).
