@@ -1,6 +1,6 @@
 # Widget Multimedia para Windows
 
-### Importante: Este proyecto esta basado en `Python 3.10`
+### Importante: Este proyecto esta basado en `Python 3.12`
 
 ## Variables de entorno
 
@@ -178,7 +178,7 @@ Recomendamos que el contenido de este repositorio este en `C:\Scripts\MediaAPI\`
 
 ### Preparación del entorno
 
-Por comodidad y aislamiento del servicio, usaremos un entorno virtual de `Python 3.10`.
+Por comodidad y aislamiento del servicio, usaremos un entorno virtual de `Python 3.12`.
 
 ```bash
 python -m venv .venv
