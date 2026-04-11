@@ -1,4 +1,4 @@
-# Python 3.10
+# Python 3.12
 fastapi==0.135.1
 PyAutoGUI==0.9.54
 uvicorn==0.41.0
