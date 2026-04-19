@@ -441,11 +441,9 @@
             disableBorderShadowThumbnail(thumbnail_element);
           }
 
-          if (data.title !== currentTitle) {
-            currentTitle = data.title;
-            title_element.innerText = data.title || "Unknown";
-            artist_element.innerText = data.artist || "Unknown";
-          }
+          currentTitle = data.title;
+          title_element.innerText = data.title || "Unknown";
+          artist_element.innerText = data.artist || "Unknown";
         };
 
         ws.onclose = () => {

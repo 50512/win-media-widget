@@ -173,7 +173,7 @@ async def get_current_media_info():
 
 
 @app.get("/panel", response_class=HTMLResponse)
-async def control_panel():
+async def polling_panel():
     if DEBUG_MODE:
         return (
             Path("./panels/polling.html")
@@ -184,7 +184,7 @@ async def control_panel():
 
 
 @app.get("/ws/panel", response_class=HTMLResponse)
-async def control_panel():
+async def websocket_panel():
     if DEBUG_MODE:
         return (
             Path("./panels/webSocket.html")
