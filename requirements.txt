@@ -7,4 +7,4 @@ winrt-Windows.Storage.Streams==3.2.1
 winrt-Windows.foundation==3.2.1
 websockets==16.0
 python-dotenv==1.2.2
-pywebview===6.1
+pywebview==6.1
